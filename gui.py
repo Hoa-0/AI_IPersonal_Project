@@ -1,4 +1,4 @@
-import pygame
+import pygame   
 import tkinter as tk
 from tkinter import ttk
 import os
@@ -38,7 +38,8 @@ canvas.pack(fill="both", expand=True)
 step_frame = ttk.Frame(display_frame, width=500, height=800)
 display_frame.add(step_frame, weight=1)
 step_text = tk.Text(step_frame, height=60, width=50, font=("Courier", 10))
-step_scroll = ttk.Scrollbar(step_frame, orient="vertical", command=step_text.yview)
+step_scroll = ttk.Scrollbar(step_frame, orient="vertical",
+command=step_text.yview)
 step_text.configure(yscrollcommand=step_scroll.set)
 step_scroll.pack(side="right", fill="y")
 step_text.pack(side="left", fill="both", expand=True)
@@ -60,6 +61,7 @@ label_font = pygame.font.Font(None, 20)
 goal_state = [[1, 2, 3], [4, 5, 6], [7, 8, 0]]
 initial_state = [[2, 6, 5], [0, 8, 7], [4, 3, 1]]
 current_state = [row[:] for row in initial_state]
+constraint_ac3_state = None  # Biến lưu trạng thái AC-3 tạo ra
 
 solution_steps = []
 current_step = 0
@@ -154,16 +156,19 @@ algo_map = {
     "Stochastic HC": stochastic_hill_climbing,
     "Simulated Annealing": simulated_annealing,
     "Beam Search": beam_search,
-    "Nondeterministic Search": nondeterministic_search,
     "Genetic": genetic_algorithm,
     "AND-OR Search": and_or_search,
-    "Trial Search": trial_and_error_search,
+    "Partial Obs Search": partial_observable_search,
+    "Unknown/Dynamic Search": unknown_dynamic_search,
+    "Forward Checking": forward_checking,
     "Backtracking Search": backtracking_search,
-    "AC-3 Check": ac3_algorithm
+    "AC-3 Check": ac3_algorithm,
+    "Q-Learning": q_learning
 }
 
 algo_label = ttk.Label(control_row1, text="Chọn thuật toán:")
 algo_label.pack(side="left", padx=5)
+
 algo_var = tk.StringVar(value="BFS")
 algo_combo = ttk.Combobox(control_row1, textvariable=algo_var, values=list(algo_map.keys()), state="readonly")
 algo_combo.pack(side="left", padx=5)
@@ -185,6 +190,21 @@ def reset():
 
 reset_btn = ttk.Button(control_row1, text="Reset", command=reset)
 reset_btn.pack(side="left", padx=5)
+
+def random_initial_state():
+    global initial_state
+    while True:
+        random_state = generate_random_state()
+        if is_solvable([cell for row in random_state for cell in row]):
+            initial_state = random_state
+            break
+    reset()
+    input_entry.delete(0, tk.END)
+    input_entry.insert(0, " ".join(str(num) for row in initial_state for num in row))
+
+random_btn = ttk.Button(control_row1, text="Random", command=random_initial_state)
+random_btn.pack(side="left", padx=5)
+
 
 def validate_input(text):
     if not text:
@@ -238,11 +258,11 @@ def apply_custom_goal_state():
 apply_goal_btn = ttk.Button(control_row3, text="Áp dụng đích", command=apply_custom_goal_state)
 apply_goal_btn.pack(side="left", padx=5)
 
-# Belief Window
+# Belief Window (Nhóm 4)
 def open_belief_window():
     belief_window = tk.Toplevel(root)
     belief_window.title("Belief State Puzzle Solver")
-    belief_window.geometry("1100x700")
+    belief_window.geometry("700x400")
     belief_window.resizable(False, False)
 
     belief_main_frame = ttk.Frame(belief_window, padding="10")
@@ -259,9 +279,6 @@ def open_belief_window():
     belief_algo_var = tk.StringVar(value="BFS")
     belief_algo_combo = ttk.Combobox(belief_control_row, textvariable=belief_algo_var, values=list(algo_map.keys()), state="readonly")
     belief_algo_combo.pack(side="left", padx=5)
-
-    scroll_label = ttk.Label(belief_control_row, text="Cuộn để xem tất cả trạng thái niềm tin và mục tiêu")
-    scroll_label.pack(side="left", padx=5)
 
     belief_display_frame = ttk.PanedWindow(belief_main_frame, orient="horizontal")
     belief_display_frame.pack(fill="both", expand=True)
@@ -410,7 +427,7 @@ def open_belief_window():
         belief_step_text.see(tk.END)
 
         for i in range(num_beliefs):
-            if not belief_solution_steps[i]:  # Skip unsolvable beliefs
+            if not belief_solution_steps[i]:
                 continue
             belief_state_history[i] = [copy.deepcopy(belief_current_states[i])]
             belief_tried_moves[i] = [set()]
@@ -439,6 +456,7 @@ def open_belief_window():
                             continue
                     belief_current_states[i] = new_state
                     belief_state_history[i].append(copy.deepcopy(new_state))
+
                     belief_tried_moves[i].append(set())
                     belief_step_text.insert(tk.END, f"Bước {step + 1} (Niềm tin {i+1}): {belief_solution_steps[i][step]}\n")
                     belief_step_text.insert(tk.END, print_state(belief_current_states[i]))
@@ -497,8 +515,130 @@ def open_belief_window():
 
     belief_window.after(10, belief_main_loop)
 
+# Constraint Window (Nhóm 5)
+def open_constraint_window():
+    constraint_window = tk.Toplevel(root)
+    constraint_window.title("Constraint Puzzle Solver")
+    constraint_window.geometry("600x400")
+    constraint_window.resizable(False, False)
+
+    constraint_main_frame = ttk.Frame(constraint_window, padding="10")
+    constraint_main_frame.pack(fill="both", expand=True)
+
+    # Khung chọn thuật toán và nút
+    constraint_control_frame = ttk.Frame(constraint_main_frame)
+    constraint_control_frame.pack(side="top", fill="x", pady=5)
+    constraint_control_row = ttk.Frame(constraint_control_frame)
+    constraint_control_row.pack(fill="x")
+    ttk.Label(constraint_control_row, text="Chọn thuật toán:").pack(side="left", padx=5)
+    constraint_algo_var = tk.StringVar(value="AC-3")
+    constraint_algo_combo = ttk.Combobox(
+        constraint_control_row, textvariable=constraint_algo_var,
+        values=["AC-3", "Backtracking", "Forward Checking"], state="readonly"
+    )
+    constraint_algo_combo.pack(side="left", padx=5)
+
+    # Khung hiển thị kết quả
+    constraint_step_text = tk.Text(constraint_main_frame, height=15, width=70, font=("Courier", 10))
+    constraint_step_scroll = ttk.Scrollbar(constraint_main_frame, orient="vertical", command=constraint_step_text.yview)
+    constraint_step_text.configure(yscrollcommand=constraint_step_scroll.set)
+    constraint_step_scroll.pack(side="right", fill="y")
+    constraint_step_text.pack(side="left", fill="both", expand=True)
+
+    def run_constraint_simulation():
+        global initial_state, constraint_ac3_state
+        algo = constraint_algo_var.get()
+        constraint_step_text.delete(1.0, tk.END)
+
+        if algo == "AC-3":
+            from algorithm import generate_random_state, is_solvable, ac3_algorithm
+            constraint_ac3_state = None  # Xóa trạng thái cũ khi bắt đầu
+            constraint_step_text.insert(tk.END, "Random trạng thái ban đầu hợp lệ...\n")
+            # Tạo ngẫu nhiên trạng thái hợp lệ
+            while True:
+                random_state = generate_random_state()
+                if is_solvable([cell for row in random_state for cell in row]):
+                    temp_initial = random_state
+                    break
+            # In trạng thái và chạy AC-3
+            constraint_step_text.insert(tk.END, "Trạng thái ban đầu (ngẫu nhiên):\n")
+            constraint_step_text.insert(tk.END, print_state(temp_initial))
+            constraint_step_text.insert(tk.END, "Trạng thái mục tiêu:\n")
+            constraint_step_text.insert(tk.END, print_state(goal_state))
+            msg, conf = ac3_algorithm(temp_initial)
+            constraint_step_text.insert(tk.END, f"{msg}\n")
+            if conf == 0.0:
+                constraint_step_text.insert(tk.END, "AC-3 thất bại. Không tiếp tục giải.\n")
+                constraint_step_text.see(tk.END)
+                return
+            # Nếu AC-3 thành công, lưu trạng thái
+            constraint_ac3_state = temp_initial
+            constraint_step_text.see(tk.END)
+            return
+
+        elif algo == "Backtracking":
+            from algorithm import backtracking_search, move_tile
+            # Chọn trạng thái sử dụng: ưu tiên constraint_ac3_state nếu tồn tại
+            if constraint_ac3_state is not None:
+                used_state = constraint_ac3_state
+            else:
+                used_state = initial_state
+            constraint_step_text.insert(tk.END, "Trạng thái ban đầu:\n")
+            constraint_step_text.insert(tk.END, print_state(used_state))
+            constraint_step_text.insert(tk.END, "Trạng thái mục tiêu:\n")
+            constraint_step_text.insert(tk.END, print_state(goal_state))
+            path, conf = backtracking_search(used_state, goal_state)
+            if not path:
+                constraint_step_text.insert(tk.END, "Không tìm thấy giải pháp với Backtracking.\n")
+            else:
+                temp_state = [row[:] for row in used_state]
+                for step, move in enumerate(path):
+                    temp_state = move_tile(temp_state, move)
+                    constraint_step_text.insert(tk.END, f"Bước {step+1}: {move}\n")
+                    constraint_step_text.insert(tk.END, print_state(temp_state))
+            constraint_step_text.see(tk.END)
+
+        elif algo == "Forward Checking":
+            from algorithm import forward_checking, move_tile
+            # Tương tự: chọn trạng thái ưu tiên từ AC-3 nếu có
+            if constraint_ac3_state is not None:
+                used_state = constraint_ac3_state
+            else:
+                used_state = initial_state
+            constraint_step_text.insert(tk.END, "Trạng thái ban đầu:\n")
+            constraint_step_text.insert(tk.END, print_state(used_state))
+            constraint_step_text.insert(tk.END, "Trạng thái mục tiêu:\n")
+            constraint_step_text.insert(tk.END, print_state(goal_state))
+            path, conf = forward_checking(used_state, goal_state)
+            if not path:
+                constraint_step_text.insert(tk.END, "Không tìm thấy giải pháp với Forward Checking.\n")
+            else:
+                temp_state = [row[:] for row in used_state]
+                for step, move in enumerate(path):
+                    temp_state = move_tile(temp_state, move)
+                    constraint_step_text.insert(tk.END, f"Bước {step+1}: {move}\n")
+                    constraint_step_text.insert(tk.END, print_state(temp_state))
+            constraint_step_text.see(tk.END)
+
+    def reset_constraint():
+        # Xóa và in lại trạng thái ban đầu/mục tiêu
+        constraint_step_text.delete(1.0, tk.END)
+        used_state = constraint_ac3_state if constraint_ac3_state is not None else initial_state
+        constraint_step_text.insert(tk.END, "Trạng thái ban đầu:\n")
+        constraint_step_text.insert(tk.END, print_state(used_state))
+        constraint_step_text.insert(tk.END, "Trạng thái mục tiêu:\n")
+        constraint_step_text.insert(tk.END, print_state(goal_state))
+
+    ttk.Button(constraint_control_row, text="Run", command=run_constraint_simulation).pack(side="left", padx=5)
+    ttk.Button(constraint_control_row, text="Reset", command=reset_constraint).pack(side="left", padx=5)
+
+# Nút mở Belief (Niềm Tin - Nhóm 4) đã có:
 belief_btn = ttk.Button(control_row1, text="Niềm Tin", command=open_belief_window)
 belief_btn.pack(side="left", padx=5)
+
+# Nút mở Constraint Window (Nhóm 5)
+constraint_btn = ttk.Button(control_row1, text="Ràng buộc", command=open_constraint_window)
+constraint_btn.pack(side="left", padx=5)
 
 draw_board(current_state)
 
