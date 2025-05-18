@@ -211,8 +211,8 @@ Qua nhiều episode, Q-Learning học dần chính sách tốt nhất. Với 8-P
 
 **Hiệu suất:** Q-Learning mạnh trong các bài toán mà môi trường phức tạp, không biết trước, song với 8-Puzzle (không gian trạng thái nhỏ nhưng muộn nhận thưởng), nó thường yêu cầu rất nhiều episode huấn luyện để hội tụ. Lời giải Q-Learning không đảm bảo ngắn nhất và độ tin cậy (confidence) phụ thuộc việc học đủ. Tuy nhiên, nó minh hoạ cách agent tự học chính sách điều khiển. Tham khảo: Q-Learning tìm các hành động tối ưu qua tương tác và cập nhật Q-table. Đồ thị hiệu suất có thể so sánh số bước trung bình hoặc thời gian huấn luyện cần thiết để đạt độ tin cậy nhất định.
 
-**Hình ảnh so sánh hiệu suất của các thuật toán.**
-![Ảnh chụp màn hình 2025-05-19 003731](https://github.com/user-attachments/assets/cb7128a4-9cf3-40d4-b53d-5081c93b416c)
+**2.7 Hình ảnh so sánh hiệu suất của các thuật toán.**
+![image](https://github.com/user-attachments/assets/2cda9a0b-e4ff-4a50-aab0-29a4a8684f08)
 
 __________
 **3. Kết luận**
