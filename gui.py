@@ -312,7 +312,7 @@ def open_belief_window():
     belief_screen = pygame.display.set_mode((600, 18000))
     pygame.display.set_caption("Belief State Board")
 
-    num_beliefs = 10
+    num_beliefs = 150
     fixed_numbers = [1, 2, 3]
     remaining_numbers = [0, 4, 5, 6, 7, 8]
     belief_states = []
