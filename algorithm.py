@@ -263,10 +263,10 @@ def simulated_annealing(start_state, goal_state):
     best_state = [row[:] for row in start_state]
     path = []
     best_path = []
-    temperature = 1000.0
-    min_temperature = 0.01
-    max_iterations = 10000
-    cooling_rate = 0.995
+    temperature = 5000.0
+    min_temperature = 0.001
+    max_iterations = 30000
+    cooling_rate = 0.999
     max_cost = manhattan_distance(start_state, goal_state) + 10
     current_cost = manhattan_distance(current_state, goal_state)
     best_cost = current_cost
@@ -334,7 +334,7 @@ def beam_search(start_state, goal_state, beam_width=2):
         queue = next_states[:beam_width]
     return None, 0.0
 
-def genetic_algorithm(start_state, goal_state, population_size=100, generations=500, mutation_rate=0.1, max_path_length=50):
+def genetic_algorithm(start_state, goal_state, population_size=400, generations=1500, mutation_rate=0.25, max_path_length=60):
     start_time = time.time()
     timeout = 10
     step_count = 0
@@ -637,7 +637,7 @@ def ac3_algorithm(start_state, goal_state=None):
                     queue.append((xk, xi))
     return ("AC-3: Nhất quán cung (arc-consistent) với AllDifferent.", 1.0)
 
-def q_learning(start_state, goal_state, episodes=1000, alpha=0.1, gamma=0.9, epsilon=0.2):
+def q_learning(start_state, goal_state, episodes=30000, alpha=0.1, gamma=0.9, epsilon=0.2):
     """
     Q-Learning cho bài toán 8-puzzle. start_state và goal_state là ma trận 3x3.
     Trả về đường đi (danh sách các ký tự 'L','R','U','D') từ start tới goal, và độ tin cậy (1.0 nếu tìm được).
